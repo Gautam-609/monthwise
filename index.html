@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f3">
+  <title>Monthwise — Monthly bill tracker</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #20251f;
+      --muted: #7b8278;
+      --line: #e8ebe4;
+      --paper: #ffffff;
+      --canvas: #f6f7f3;
+      --green: #245a40;
+      --green-dark: #19442f;
+      --green-soft: #eaf2ec;
+      --amber: #a36a18;
+      --amber-soft: #fbf1df;
+      --red: #b4544d;
+      --red-soft: #f9eae8;
+      --shadow: 0 12px 34px rgba(32, 37, 31, .055);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .app { min-height: 100vh; }
+    .topbar {
+      height: 72px;
+      padding: 0 max(28px, calc((100vw - 1280px) / 2));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.86);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 730; letter-spacing: -.45px; font-size: 17px; }
+    .brand-mark {
+      width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center;
+      color: white; background: var(--green); font-size: 17px; font-weight: 600;
+    }
+    .top-right { display: flex; align-items: center; gap: 13px; color: var(--muted); font-size: 13px; }
+    .avatar {
+      width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%;
+      background: #e8eee8; color: var(--green); font-weight: 700; font-size: 12px;
+    }
+    main { max-width: 1280px; margin: 0 auto; padding: 39px 28px 56px; }
+    .page-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin-bottom: 27px; }
+    .eyebrow { margin: 0 0 8px; color: var(--green); font-size: 11px; font-weight: 750; letter-spacing: 1.35px; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(26px, 3vw, 34px); line-height: 1.15; letter-spacing: -1.2px; }
+    .subtitle { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+    .primary-button {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 43px; padding: 0 17px; border: 0; border-radius: 9px;
+      background: var(--green); color: white; font-weight: 650; box-shadow: 0 3px 8px rgba(36,90,64,.14);
+      transition: background .15s, transform .15s;
+    }
+    .primary-button:hover { background: var(--green-dark); transform: translateY(-1px); }
+    .month-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .month-control { display: flex; align-items: center; gap: 15px; }
+    .month-title { min-width: 164px; text-align: center; font-size: 17px; font-weight: 680; letter-spacing: -.3px; }
+    .icon-button {
+      width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line);
+      border-radius: 8px; background: white; color: #596158; font-size: 18px;
+    }
+    .icon-button:hover { background: #f0f3ee; }
+    .today-button { border: 0; padding: 7px 9px; color: var(--green); background: transparent; font-size: 12px; font-weight: 650; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 21px; }
+    .summary-card, .panel { background: var(--paper); border: 1px solid #ebeee8; border-radius: 13px; box-shadow: var(--shadow); }
+    .summary-card { min-height: 137px; padding: 19px 20px; }
+    .card-top { display: flex; align-items: center; justify-content: space-between; }
+    .card-label { color: var(--muted); font-size: 12px; font-weight: 560; }
+    .card-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; background: var(--green-soft); color: var(--green); font-size: 15px; }
+    .card-icon.amber { background: var(--amber-soft); color: var(--amber); }
+    .card-icon.red { background: var(--red-soft); color: var(--red); }
+    .card-value { margin-top: 13px; font-size: 26px; line-height: 1; letter-spacing: -.7px; font-weight: 720; }
+    .card-note { margin-top: 8px; color: var(--muted); font-size: 11px; }
+    .content-grid { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(270px, .85fr); gap: 18px; align-items: start; }
+    .panel { overflow: hidden; }
+    .panel-heading { display: flex; justify-content: space-between; align-items: center; padding: 19px 21px 16px; }
+    .panel-heading h2 { margin: 0; font-size: 15px; letter-spacing: -.2px; }
+    .bill-count { color: var(--muted); font-size: 11px; }
+    .toolbar { display: flex; gap: 9px; padding: 0 21px 15px; }
+    .search-wrap { position: relative; flex: 1; }
+    .search-wrap span { position: absolute; left: 11px; top: 9px; color: #8a9188; }
+    .search-wrap input, .toolbar select {
+      height: 36px; width: 100%; border: 1px solid var(--line); outline: 0; border-radius: 7px;
+      background: #fff; color: var(--ink); font-size: 12px;
+    }
+    .search-wrap input { padding: 0 10px 0 32px; }
+    .toolbar select { width: 126px; padding: 0 9px; }
+    .search-wrap input:focus, .toolbar select:focus, .field input:focus, .field select:focus { border-color: #7ca28a; box-shadow: 0 0 0 3px rgba(36,90,64,.09); }
+    .bill-list { border-top: 1px solid #f0f1ed; }
+    .bill-row { display: grid; grid-template-columns: minmax(0, 1fr) 94px 110px 94px 32px; align-items: center; gap: 10px; padding: 14px 21px; border-bottom: 1px solid #f0f1ed; }
+    .bill-row:last-child { border-bottom: 0; }
+    .bill-main { min-width: 0; display: flex; align-items: center; gap: 11px; }
+    .bill-symbol { flex: 0 0 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: #f2f4ef; font-size: 16px; }
+    .bill-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 650; }
+    .bill-category { margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .bill-due { color: #555d54; font-size: 11px; }
+    .bill-amount { text-align: right; font-size: 12px; font-weight: 680; white-space: nowrap; }
+    .status {
+      display: inline-flex; align-items: center; justify-content: center; justify-self: end;
+      min-width: 69px; padding: 5px 8px; border-radius: 99px; font-size: 10px; font-weight: 650;
+    }
+    .status.paid { color: var(--green); background: var(--green-soft); }
+    .status.upcoming { color: var(--amber); background: var(--amber-soft); }
+    .status.overdue { color: var(--red); background: var(--red-soft); }
+    .status-action { border: 0; padding: 0; background: transparent; }
+    .status-action:hover { filter: brightness(.94); }
+    .more-button { border: 0; background: transparent; color: #858c83; font-size: 19px; line-height: 1; border-radius: 6px; }
+    .more-button:hover { background: #f1f2ef; color: var(--ink); }
+    .empty-state { padding: 43px 20px; text-align: center; color: var(--muted); font-size: 12px; }
+    .empty-icon { display: grid; place-items: center; width: 42px; height: 42px; margin: 0 auto 12px; border-radius: 13px; background: var(--green-soft); color: var(--green); font-size: 20px; }
+    .empty-state strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 13px; }
+    .side-panel { padding: 20px; }
+    .side-panel h2 { margin: 0; font-size: 15px; letter-spacing: -.2px; }
+    .side-caption { margin: 5px 0 20px; color: var(--muted); font-size: 11px; }
+    .category-item { margin: 17px 0; }
+    .category-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 11px; }
+    .category-name { display: flex; align-items: center; gap: 8px; color: #424941; }
+    .category-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+    .category-amount { font-weight: 650; white-space: nowrap; }
+    .progress-track { height: 5px; overflow: hidden; border-radius: 9px; background: #f0f2ed; }
+    .progress-fill { height: 100%; border-radius: 9px; background: #4f8263; }
+    .side-divider { height: 1px; margin: 20px 0 16px; background: var(--line); }
+    .insight { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border-radius: 9px; background: #f4f7f2; color: #526451; font-size: 11px; line-height: 1.55; }
+    .insight-icon { font-size: 15px; }
+    .footer-note { padding: 17px 0 0; color: #8a9087; text-align: center; font-size: 10px; }
+    .modal-backdrop { position: fixed; inset: 0; z-index: 5; display: none; place-items: center; padding: 18px; background: rgba(28,36,29,.38); }
+    .modal-backdrop.open { display: grid; }
+    .modal { width: min(100%, 440px); border-radius: 14px; background: white; box-shadow: 0 24px 80px rgba(17,30,20,.2); }
+    .modal-heading { display: flex; align-items: center; justify-content: space-between; padding: 21px 23px 17px; border-bottom: 1px solid var(--line); }
+    .modal-heading h2 { margin: 0; font-size: 17px; }
+    .close-button { width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 20px; }
+    .close-button:hover { background: #f2f3f0; }
+    form { padding: 20px 23px 23px; }
+    .field { margin-bottom: 15px; }
+    .field label { display: block; margin-bottom: 6px; color: #50574f; font-size: 11px; font-weight: 650; }
+    .field input, .field select { width: 100%; height: 40px; padding: 0 11px; border: 1px solid var(--line); border-radius: 7px; outline: 0; background: #fff; color: var(--ink); font-size: 13px; }
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 21px; }
+    .secondary-button { min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 8px; background: white; color: #50574f; font-size: 12px; font-weight: 600; }
+    .form-actions .primary-button { min-height: 40px; font-size: 12px; }
+    .toast { position: fixed; z-index: 8; left: 50%; bottom: 24px; transform: translate(-50%, 15px); padding: 11px 16px; border-radius: 9px; background: #243b2d; color: white; font-size: 12px; opacity: 0; pointer-events: none; transition: .2s; box-shadow: 0 8px 22px rgba(0,0,0,.15); }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    @media (max-width: 900px) {
+      main { padding-top: 30px; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .content-grid { grid-template-columns: 1fr; }
+      .side-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 0 25px; }
+      .side-panel > h2, .side-panel > .side-caption { grid-column: 1 / -1; }
+      .side-divider { display: none; }
+      .insight { align-self: center; }
+    }
+    @media (max-width: 600px) {
+      .topbar { height: 62px; padding: 0 18px; }
+      .top-right > span { display: none; }
+      main { padding: 28px 16px 38px; }
+      .page-heading { align-items: flex-start; flex-direction: column; margin-bottom: 24px; }
+      .page-heading .primary-button { width: 100%; }
+      .month-bar { align-items: center; }
+      .month-control { gap: 8px; }
+      .month-title { min-width: 140px; font-size: 15px; }
+      .summary-grid { gap: 10px; }
+      .summary-card { min-height: 123px; padding: 15px; }
+      .card-value { font-size: 22px; }
+      .panel-heading { padding: 17px 15px 14px; }
+      .toolbar { padding: 0 15px 13px; }
+      .toolbar select { width: 105px; }
+      .bill-row { grid-template-columns: minmax(0, 1fr) 74px 31px; gap: 7px; padding: 13px 14px; }
+      .bill-row .bill-due { display: none; }
+      .bill-amount { font-size: 11px; }
+      .status { grid-column: 2; grid-row: 2; justify-self: end; min-width: 64px; padding: 4px 7px; }
+      .more-button { grid-column: 3; grid-row: 1 / span 2; }
+      .bill-main { grid-row: 1 / span 2; }
+      .side-panel { display: block; }
+      .side-divider { display: block; }
+      .insight { margin-top: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">m</span><span>monthwise</span></div>
+      <div class="top-right"><span>Money, a little more manageable.</span><span class="avatar" aria-label="Your account">MW</span></div>
+    </header>
+    <main>
+      <section class="page-heading">
+        <div>
+          <p class="eyebrow">Your finances, in focus</p>
+          <h1>Monthly bills</h1>
+          <p class="subtitle">Stay on top of what’s due and what’s already taken care of.</p>
+        </div>
+        <button class="primary-button" id="addBillButton" type="button"><span aria-hidden="true">＋</span> Add a bill</button>
+      </section>
+
+      <section class="month-bar" aria-label="Choose month">
+        <div class="month-control">
+          <button class="icon-button" id="previousMonth" type="button" aria-label="Previous month">‹</button>
+          <div class="month-title" id="monthTitle"></div>
+          <button class="icon-button" id="nextMonth" type="button" aria-label="Next month">›</button>
+          <button class="today-button" id="currentMonth" type="button">Today</button>
+        </div>
+      </section>
+
+      <section class="summary-grid" aria-label="Monthly summary">
+        <article class="summary-card">
+          <div class="card-top"><span class="card-label">Total bills</span><span class="card-icon">₹</span></div>
+          <div class="card-value" id="totalValue">₹0</div><div class="card-note" id="totalNote">Across all your bills</div>
+        </article>
+        <article class="summary-card">
+          <div class="card-top"><span class="card-label">Paid so far</span><span class="card-icon">✓</span></div>
+          <div class="card-value" id="paidValue">₹0</div><div class="card-note" id="paidNote">0 bills paid</div>
+        </article>
+        <article class="summary-card">
+          <div class="card-top"><span class="card-label">Still to pay</span><span class="card-icon amber">◷</span></div>
+          <div class="card-value" id="remainingValue">₹0</div><div class="card-note" id="remainingNote">Nothing due right now</div>
+        </article>
+        <article class="summary-card">
+          <div class="card-top"><span class="card-label">Overdue</span><span class="card-icon red">!</span></div>
+          <div class="card-value" id="overdueValue">₹0</div><div class="card-note" id="overdueNote">You’re all caught up</div>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <div class="panel">
+          <div class="panel-heading"><h2>All bills</h2><span class="bill-count" id="billCount"></span></div>
+          <div class="toolbar">
+            <label class="search-wrap"><span aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="Search bills..." aria-label="Search bills"></label>
+            <select id="statusFilter" aria-label="Filter bills by status">
+              <option value="all">All statuses</option>
+              <option value="unpaid">Unpaid</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
+          <div class="bill-list" id="billList"></div>
+        </div>
+        <aside class="panel side-panel">
+          <h2>Spending by category</h2>
+          <p class="side-caption">A look at where this month goes</p>
+          <div id="categoryList"></div>
+          <div class="side-divider"></div>
+          <div class="insight"><span class="insight-icon" aria-hidden="true">✦</span><span id="insightText">Add your bills to see a helpful monthly snapshot here.</span></div>
+        </aside>
+      </section>
+      <div class="footer-note">Your bills are saved in this browser on this device. They are not synced or backed up.</div>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" role="presentation">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-heading"><h2 id="modalTitle">Add a bill</h2><button class="close-button" id="closeModal" type="button" aria-label="Close">×</button></div>
+      <form id="billForm">
+        <div class="field"><label for="billName">Bill name</label><input id="billName" name="name" type="text" maxlength="70" placeholder="e.g. Electricity" required></div>
+        <div class="field-grid">
+          <div class="field"><label for="billAmount">Amount (₹)</label><input id="billAmount" name="amount" type="number" min="0.01" step="0.01" placeholder="0.00" required></div>
+          <div class="field"><label for="billDue">Due date</label><input id="billDue" name="due" type="date" required></div>
+        </div>
+        <div class="field"><label for="billCategory">Category</label>
+          <select id="billCategory" name="category">
+            <option>Utilities</option><option>Housing</option><option>Subscriptions</option><option>Insurance</option><option>Transport</option><option>Health</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-actions"><button class="secondary-button" id="cancelModal" type="button">Cancel</button><button class="primary-button" type="submit">Save bill</button></div>
+      </form>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      const today = new Date();
+      let selectedMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      let bills = [];
+      let allBills = [];
+      let toastTimer;
+      const storageKey = "monthwise-bills";
+
+      const $ = (id) => document.getElementById(id);
+      const monthTitle = $("monthTitle");
+      const billList = $("billList");
+      const categoryList = $("categoryList");
+      const backdrop = $("modalBackdrop");
+
+      function readStoredBills() {
+        const stored = localStorage.getItem(storageKey);
+        if (stored === null) return [];
+        const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed)) throw new Error("Saved bill data is invalid.");
+        return parsed;
+      }
+
+      function saveStoredBills(updatedBills) {
+        localStorage.setItem(storageKey, JSON.stringify(updatedBills));
+      }
+
+      function loadBills() {
+        try {
+          allBills = readStoredBills();
+          bills = allBills.filter((bill) => {
+            const date = dateForBill(bill.due);
+            return date.getFullYear() === selectedMonth.getFullYear() &&
+              date.getMonth() === selectedMonth.getMonth();
+          });
+          render();
+        } catch (error) {
+          console.error("Could not load bills from this browser.", error);
+          showToast(error.message || "Couldn’t load bills from this browser.");
+        }
+      }
+
+      function formatMoney(amount) {
+        return new Intl.NumberFormat("en-IN", {
+          style: "currency", currency: "INR", maximumFractionDigits: 0
+        }).format(amount);
+      }
+
+      function formatMonth(date) {
+        return new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric" }).format(date);
+      }
+
+      function dateForBill(dateString) {
+        const [year, month, day] = dateString.split("-").map(Number);
+        return new Date(year, month - 1, day);
+      }
+
+      function formatDue(dateString) {
+        return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short" }).format(dateForBill(dateString));
+      }
+
+      function getStatus(bill) {
+        if (bill.paid) return "paid";
+        const due = dateForBill(bill.due);
+        const now = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        return due < now ? "overdue" : "upcoming";
+      }
+
+      function iconForCategory(category) {
+        return {
+          Utilities: "ϟ", Housing: "⌂", Subscriptions: "♫", Insurance: "✚",
+          Transport: "↗", Health: "＋", Other: "◈"
+        }[category] || "◈";
+      }
+
+      function showToast(message) {
+        const toast = $("toast");
+        toast.textContent = message;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+      }
+
+      function renderSummary(monthBills) {
+        const paid = monthBills.filter((bill) => bill.paid);
+        const unpaid = monthBills.filter((bill) => !bill.paid);
+        const overdue = unpaid.filter((bill) => getStatus(bill) === "overdue");
+        const sum = (items) => items.reduce((total, bill) => total + Number(bill.amount), 0);
+        $("totalValue").textContent = formatMoney(sum(monthBills));
+        $("paidValue").textContent = formatMoney(sum(paid));
+        $("remainingValue").textContent = formatMoney(sum(unpaid));
+        $("overdueValue").textContent = formatMoney(sum(overdue));
+        $("totalNote").textContent = `${monthBills.length} ${monthBills.length === 1 ? "bill" : "bills"} this month`;
+        $("paidNote").textContent = `${paid.length} ${paid.length === 1 ? "bill" : "bills"} paid`;
+        $("remainingNote").textContent = unpaid.length ? `${unpaid.length} ${unpaid.length === 1 ? "bill" : "bills"} left to pay` : "Nothing due right now";
+        $("overdueNote").textContent = overdue.length ? `${overdue.length} past-due ${overdue.length === 1 ? "bill" : "bills"}` : "You’re all caught up";
+      }
+
+      function makeBillRow(bill) {
+        const row = document.createElement("div");
+        row.className = "bill-row";
+        const main = document.createElement("div");
+        main.className = "bill-main";
+        const symbol = document.createElement("span");
+        symbol.className = "bill-symbol";
+        symbol.textContent = iconForCategory(bill.category);
+        const details = document.createElement("div");
+        details.style.minWidth = "0";
+        const name = document.createElement("div");
+        name.className = "bill-title";
+        name.textContent = bill.name;
+        const category = document.createElement("div");
+        category.className = "bill-category";
+        category.textContent = bill.category;
+        details.append(name, category);
+        main.append(symbol, details);
+
+        const due = document.createElement("div");
+        due.className = "bill-due";
+        due.textContent = `Due ${formatDue(bill.due)}`;
+        const amount = document.createElement("div");
+        amount.className = "bill-amount";
+        amount.textContent = formatMoney(Number(bill.amount));
+        const status = document.createElement("button");
+        const statusType = getStatus(bill);
+        status.type = "button";
+        status.className = `status status-action ${statusType}`;
+        status.textContent = statusType === "paid" ? "Paid" : statusType === "overdue" ? "Overdue" : "Upcoming";
+        status.setAttribute("aria-label", bill.paid ? `Mark ${bill.name} as unpaid` : `Mark ${bill.name} as paid`);
+        status.addEventListener("click", () => togglePaid(bill.id));
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "more-button";
+        remove.textContent = "×";
+        remove.setAttribute("aria-label", `Delete ${bill.name}`);
+        remove.addEventListener("click", () => deleteBill(bill.id));
+        row.append(main, due, amount, status, remove);
+        return row;
+      }
+
+      function renderBills(monthBills) {
+        const query = $("searchInput").value.trim().toLocaleLowerCase();
+        const filter = $("statusFilter").value;
+        const visible = monthBills.filter((bill) => {
+          const status = getStatus(bill);
+          const matchesQuery = `${bill.name} ${bill.category}`.toLocaleLowerCase().includes(query);
+          const matchesFilter = filter === "all" || (filter === "unpaid" && !bill.paid) ||
+            (filter === "paid" && bill.paid) || (filter === "overdue" && status === "overdue");
+          return matchesQuery && matchesFilter;
+        });
+        $("billCount").textContent = `${visible.length} ${visible.length === 1 ? "bill" : "bills"}`;
+        billList.replaceChildren();
+        if (!visible.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty-state";
+          const icon = document.createElement("span");
+          icon.className = "empty-icon";
+          icon.textContent = query || filter !== "all" ? "⌕" : "＋";
+          const message = document.createElement("strong");
+          message.textContent = query || filter !== "all" ? "No bills found" : "A fresh start";
+          const detail = document.createElement("span");
+          detail.textContent = query || filter !== "all" ? "Try changing your search or filter." : "Add a bill and it’ll show up here.";
+          empty.append(icon, message, detail);
+          billList.append(empty);
+          return;
+        }
+        visible.forEach((bill) => billList.append(makeBillRow(bill)));
+      }
+
+      function renderCategories(monthBills) {
+        categoryList.replaceChildren();
+        const totals = new Map();
+        monthBills.forEach((bill) => totals.set(bill.category, (totals.get(bill.category) || 0) + Number(bill.amount)));
+        const entries = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+        const maximum = entries.length ? entries[0][1] : 0;
+        if (!entries.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty-state";
+          empty.textContent = "No category spending yet.";
+          categoryList.append(empty);
+          $("insightText").textContent = "Add a few bills to see your spending snapshot.";
+          return;
+        }
+        entries.forEach(([category, amount], index) => {
+          const item = document.createElement("div");
+          item.className = "category-item";
+          const meta = document.createElement("div");
+          meta.className = "category-meta";
+          const name = document.createElement("span");
+          name.className = "category-name";
+          const dot = document.createElement("span");
+          dot.className = "category-dot";
+          dot.style.background = ["#4f8263", "#85a77d", "#d6a85d", "#7c91a2", "#c67c68", "#9a89ad", "#9ca398"][index % 7];
+          name.append(dot, document.createTextNode(category));
+          const value = document.createElement("span");
+          value.className = "category-amount";
+          value.textContent = formatMoney(amount);
+          meta.append(name, value);
+          const track = document.createElement("div");
+          track.className = "progress-track";
+          const fill = document.createElement("div");
+          fill.className = "progress-fill";
+          fill.style.width = `${Math.max(5, Math.round(amount / maximum * 100))}%`;
+          fill.style.background = dot.style.background;
+          track.append(fill);
+          item.append(meta, track);
+          categoryList.append(item);
+        });
+        const total = monthBills.reduce((sum, bill) => sum + Number(bill.amount), 0);
+        const highest = entries[0];
+        $("insightText").textContent = `${highest[0]} is your biggest category at ${formatMoney(highest[1])} — ${Math.round(highest[1] / total * 100)}% of this month’s bills.`;
+      }
+
+      function render() {
+        monthTitle.textContent = formatMonth(selectedMonth);
+        renderSummary(bills);
+        renderBills(bills);
+        renderCategories(bills);
+      }
+
+      function togglePaid(id) {
+        const bill = bills.find((item) => item.id === id);
+        if (!bill) return;
+        try {
+          const updated = { ...bill, paid: !bill.paid };
+          const updatedBills = allBills.map((item) => item.id === id ? updated : item);
+          saveStoredBills(updatedBills);
+          allBills = updatedBills;
+          bills = bills.map((item) => item.id === id ? updated : item);
+          showToast(updated.paid ? "Bill marked as paid." : "Bill marked as unpaid.");
+          render();
+        } catch (error) {
+          console.error("Could not update bill.", error);
+          showToast("Couldn’t save the change in this browser.");
+        }
+      }
+
+      function deleteBill(id) {
+        const bill = bills.find((item) => item.id === id);
+        if (!bill || !window.confirm(`Delete "${bill.name}"?`)) return;
+        try {
+          const updatedBills = allBills.filter((item) => item.id !== id);
+          saveStoredBills(updatedBills);
+          allBills = updatedBills;
+          bills = bills.filter((item) => item.id !== id);
+          showToast("Bill deleted.");
+          render();
+        } catch (error) {
+          console.error("Could not delete bill.", error);
+          showToast("Couldn’t delete the bill from this browser.");
+        }
+      }
+
+      function openModal() {
+        $("billForm").reset();
+        const year = selectedMonth.getFullYear();
+        const month = String(selectedMonth.getMonth() + 1).padStart(2, "0");
+        $("billDue").value = `${year}-${month}-01`;
+        backdrop.classList.add("open");
+        $("billName").focus();
+      }
+
+      function closeModal() {
+        backdrop.classList.remove("open");
+      }
+
+      $("addBillButton").addEventListener("click", openModal);
+      $("closeModal").addEventListener("click", closeModal);
+      $("cancelModal").addEventListener("click", closeModal);
+      backdrop.addEventListener("click", (event) => {
+        if (event.target === backdrop) closeModal();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && backdrop.classList.contains("open")) closeModal();
+      });
+      $("previousMonth").addEventListener("click", () => {
+        selectedMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1, 1);
+        loadBills();
+      });
+      $("nextMonth").addEventListener("click", () => {
+        selectedMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 1);
+        loadBills();
+      });
+      $("currentMonth").addEventListener("click", () => {
+        selectedMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        loadBills();
+      });
+      $("searchInput").addEventListener("input", render);
+      $("statusFilter").addEventListener("change", render);
+      $("billForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        const bill = {
+          name: String(form.get("name")).trim(),
+          amount: Number(form.get("amount")),
+          due: String(form.get("due")),
+          category: String(form.get("category")),
+          paid: false
+        };
+        if (!bill.name || !Number.isFinite(bill.amount) || bill.amount <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(bill.due)) {
+          showToast("Please enter a name, valid amount, and due date.");
+          return;
+        }
+        try {
+          const savedBill = {
+            ...bill,
+            id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`
+          };
+          const updatedBills = [...allBills, savedBill];
+          saveStoredBills(updatedBills);
+          allBills = updatedBills;
+          const dueDate = dateForBill(savedBill.due);
+          selectedMonth = new Date(dueDate.getFullYear(), dueDate.getMonth(), 1);
+          bills = allBills.filter((item) => {
+            const date = dateForBill(item.due);
+            return date.getFullYear() === selectedMonth.getFullYear() &&
+              date.getMonth() === selectedMonth.getMonth();
+          });
+          closeModal();
+          render();
+          showToast("Bill added.");
+        } catch (error) {
+          console.error("Could not add bill.", error);
+          showToast("Couldn’t save the bill in this browser.");
+        }
+      });
+      render();
+      loadBills();
+    })();
+  </script>
+</body>
+</html>
